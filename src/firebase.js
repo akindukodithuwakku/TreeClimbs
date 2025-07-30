@@ -3,14 +3,13 @@ import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCAZAzffI5C3bgrIVduRZ25pOea8YI4-ts",
-  authDomain: "treeclimber-b1f3c.firebaseapp.com",
-  databaseURL:
-    "https://treeclimber-b1f3c-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "treeclimber-b1f3c",
-  storageBucket: "treeclimber-b1f3c.appspot.com",
-  messagingSenderId: "554804238885",
-  appId: "1:554804238885:web:6ec3c4281f3696914c7dcc",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase

@@ -24,8 +24,8 @@ function App() {
         // Sign in to Firebase
         await signInWithEmailAndPassword(
           auth,
-          "akindukodithuwakku@gmail.com",
-          "akindu123"
+          import.meta.env.VITE_FIREBASE_USER_EMAIL,
+          import.meta.env.VITE_FIREBASE_USER_PASSWORD
         );
 
         setAuthStatus("authenticated");
