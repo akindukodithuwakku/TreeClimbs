@@ -1,0 +1,39 @@
+{
+  "name": "coconut-tree-climber-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time dashboard for coconut tree climbing activities using ESP32 and Firebase",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "firebase": "^10.14.0",
+    "chart.js": "^4.4.4",
+    "react-chartjs-2": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  },
+  "keywords": [
+    "react",
+    "firebase",
+    "esp32",
+    "dashboard",
+    "tree-climbing",
+    "real-time"
+  ],
+  "author": "Tree Climber Team",
+  "license": "MIT"
+}
