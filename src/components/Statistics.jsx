@@ -20,17 +20,25 @@ const Statistics = ({
         ).toFixed(1)
       : 0;
 
-  // Calculate session duration in minutes
+  // Calculate session duration in minutes (only for current session)
   const sessionDuration = sessionStartTime
     ? Math.floor((Date.now() / 1000 - sessionStartTime) / 60)
     : 0;
 
-  // Calculate climb rate (trees per hour)
+  // Calculate climb rate (trees per hour) - only for current session
   const climbRate =
     sessionDuration > 0 ? ((treeCount / sessionDuration) * 60).toFixed(1) : 0;
 
   // Get current climbing status
   const climbStatus = climbDetector ? climbDetector.getStatus() : null;
+
+  // Format session duration
+  const formatDuration = (minutes) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -62,14 +70,16 @@ const Statistics = ({
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-500">
-        <h3 className="text-lg font-semibold text-gray-700">Max Height</h3>
+        <h3 className="text-lg font-semibold text-gray-700">
+          Session Duration
+        </h3>
         <p className="text-3xl text-purple-600 font-bold">
-          {maxAltitude.toFixed(1)} m
+          {formatDuration(sessionDuration)}
         </p>
-        <p className="text-sm text-gray-500">Session peak</p>
-        {climbStatus && climbStatus.initialAltitude && (
+        <p className="text-sm text-gray-500">Current session</p>
+        {sessionStartTime && (
           <p className="text-xs text-purple-600 mt-1">
-            Change: +{(maxAltitude - climbStatus.initialAltitude).toFixed(1)}m
+            Started: {new Date(sessionStartTime * 1000).toLocaleTimeString()}
           </p>
         )}
       </div>
@@ -79,7 +89,7 @@ const Statistics = ({
         <p className="text-3xl text-orange-600 font-bold">{climbRate}</p>
         <p className="text-sm text-gray-500">Trees/hour</p>
         <p className="text-xs text-orange-600 mt-1">
-          Session: {sessionDuration} min
+          Session: {formatDuration(sessionDuration)}
         </p>
       </div>
     </div>
