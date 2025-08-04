@@ -41,8 +41,8 @@ const SessionInfo = ({ altitudeData, sessionStartTime, climbDetector }) => {
             Tree Climbing Logic:
           </h3>
           <ul className="text-sm text-gray-600 space-y-1">
-            <li>• Detects 5m altitude changes (up & down)</li>
-            <li>• One climb = going up 5m + coming down 5m</li>
+            <li>• Detects 3m altitude changes (up & down)</li>
+            <li>• One climb = going up 3m + coming down 3m</li>
             <li>• Session-based counting (resets on ESP32 restart)</li>
             <li>• Real-time updates from BME280 sensor</li>
             {climbStatus?.isClimbing && (
@@ -86,6 +86,12 @@ const SessionInfo = ({ altitudeData, sessionStartTime, climbDetector }) => {
               <span className="text-gray-600">Total Climbs:</span>
               <span className="ml-1 font-medium">
                 {climbStatus.totalClimbs}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Threshold:</span>
+              <span className="ml-1 font-medium">
+                {climbStatus.minAltitudeChange}m
               </span>
             </div>
           </div>

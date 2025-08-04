@@ -1,6 +1,6 @@
 /**
  * Improved tree climbing detection logic
- * Detects climbs based on altitude changes (going up and down by 5m)
+ * Detects climbs based on altitude changes (going up and down by 3m)
  * rather than just being above a certain altitude
  */
 
@@ -11,8 +11,11 @@ export class TreeClimbDetector {
     this.currentValley = null;
     this.isClimbing = false;
     this.climbs = [];
-    this.minAltitudeChange = 5; // 5 meters change required
+    this.minAltitudeChange = 3; // Changed from 5 to 3 meters change required
     this.lastProcessedIndex = -1;
+    this.climbStartTime = null;
+    this.climbStartAltitude = null;
+    this.climbStartIndex = null;
   }
 
   /**
@@ -45,7 +48,7 @@ export class TreeClimbDetector {
       const dataIndex = startIndex + i;
       const { timestamp, altitude } = newData[i];
 
-      this.processAltitudeReading(timestamp, altitude, dataIndex);
+      this.processAltitudeReading(timestamp, altitude, dataIndex, altitudeData);
     }
 
     this.lastProcessedIndex = altitudeData.length - 1;
@@ -61,8 +64,9 @@ export class TreeClimbDetector {
    * @param {number} timestamp - Unix timestamp
    * @param {number} altitude - Altitude in meters
    * @param {number} dataIndex - Index in the data array
+   * @param {Array} fullData - Complete altitude data array
    */
-  processAltitudeReading(timestamp, altitude, dataIndex) {
+  processAltitudeReading(timestamp, altitude, dataIndex, fullData) {
     // Update peak and valley
     if (altitude > this.currentPeak) {
       this.currentPeak = altitude;
@@ -72,22 +76,28 @@ export class TreeClimbDetector {
     }
 
     // Calculate altitude change from initial position
-    const altitudeChange = Math.abs(altitude - this.initialAltitude);
+    const altitudeChange = altitude - this.initialAltitude;
 
-    // Detect climbing start (going up more than 5m from initial)
+    // Detect climbing start (going up more than 3m from initial)
     if (
       !this.isClimbing &&
       altitude > this.initialAltitude + this.minAltitudeChange
     ) {
       this.isClimbing = true;
+      this.climbStartTime = timestamp;
+      this.climbStartAltitude = this.initialAltitude;
+      this.climbStartIndex = dataIndex;
+
       console.log(
-        `🌳 Climbing started at ${altitude.toFixed(1)}m (change: +${(
-          altitude - this.initialAltitude
-        ).toFixed(1)}m)`
+        `🌳 Climbing started at ${altitude.toFixed(
+          1
+        )}m (change: +${altitudeChange.toFixed(
+          1
+        )}m from base ${this.initialAltitude.toFixed(1)}m)`
       );
     }
 
-    // Detect climb completion (going down more than 5m from peak)
+    // Detect climb completion (going down more than 3m from peak)
     if (this.isClimbing) {
       const peakAltitude = this.currentPeak;
       const currentChange = peakAltitude - altitude;
@@ -98,12 +108,14 @@ export class TreeClimbDetector {
 
         const climb = {
           id: this.climbs.length + 1,
-          startTime: this.findClimbStartTime(dataIndex),
+          startTime: this.climbStartTime,
           endTime: timestamp,
+          startAltitude: this.climbStartAltitude,
           peakAltitude: peakAltitude,
-          initialAltitude: this.initialAltitude,
-          totalChange: peakAltitude - this.initialAltitude,
-          duration: timestamp - this.findClimbStartTime(dataIndex),
+          endAltitude: altitude,
+          totalAscent: peakAltitude - this.climbStartAltitude,
+          totalDescent: peakAltitude - altitude,
+          duration: timestamp - this.climbStartTime,
         };
 
         this.climbs.push(climb);
@@ -111,26 +123,20 @@ export class TreeClimbDetector {
         console.log(
           `✅ Tree climb completed! Peak: ${peakAltitude.toFixed(
             1
-          )}m, Total change: ${climb.totalChange.toFixed(1)}m`
+          )}m, Ascent: ${climb.totalAscent.toFixed(
+            1
+          )}m, Descent: ${climb.totalDescent.toFixed(1)}m`
         );
 
         // Reset for next climb
         this.initialAltitude = altitude; // New baseline
         this.currentPeak = altitude;
         this.currentValley = altitude;
+        this.climbStartTime = null;
+        this.climbStartAltitude = null;
+        this.climbStartIndex = null;
       }
     }
-  }
-
-  /**
-   * Find the timestamp when the current climb started
-   * @param {number} currentIndex - Current data index
-   * @returns {number} - Start timestamp
-   */
-  findClimbStartTime(currentIndex) {
-    // This is a simplified version - in practice, you'd want to track the actual start time
-    // For now, we'll use a reasonable estimate based on the climb detection logic
-    return Date.now() / 1000 - 300; // Assume 5 minutes ago as a reasonable estimate
   }
 
   /**
@@ -143,6 +149,9 @@ export class TreeClimbDetector {
     this.isClimbing = false;
     this.climbs = [];
     this.lastProcessedIndex = -1;
+    this.climbStartTime = null;
+    this.climbStartAltitude = null;
+    this.climbStartIndex = null;
   }
 
   /**
@@ -156,6 +165,7 @@ export class TreeClimbDetector {
       currentPeak: this.currentPeak,
       currentValley: this.currentValley,
       totalClimbs: this.climbs.length,
+      minAltitudeChange: this.minAltitudeChange,
     };
   }
 }
@@ -172,7 +182,7 @@ export function detectClimbsSimple(altitudeData) {
   let baselineAltitude = altitudeData[0].altitude;
   let peakAltitude = baselineAltitude;
   let isInClimb = false;
-  const minChange = 5; // 5 meters
+  const minChange = 3; // Changed from 5 to 3 meters
 
   for (let i = 1; i < altitudeData.length; i++) {
     const currentAltitude = altitudeData[i].altitude;
@@ -182,12 +192,12 @@ export function detectClimbsSimple(altitudeData) {
       peakAltitude = currentAltitude;
     }
 
-    // Check if we've started climbing (gone up more than 5m from baseline)
+    // Check if we've started climbing (gone up more than 3m from baseline)
     if (!isInClimb && currentAltitude > baselineAltitude + minChange) {
       isInClimb = true;
     }
 
-    // Check if we've completed a climb (come down more than 5m from peak)
+    // Check if we've completed a climb (come down more than 3m from peak)
     if (isInClimb && peakAltitude - currentAltitude >= minChange) {
       climbs++;
       isInClimb = false;

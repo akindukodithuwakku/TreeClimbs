@@ -38,6 +38,7 @@ const Statistics = ({
         <h3 className="text-lg font-semibold text-gray-700">Trees Climbed</h3>
         <p className="text-3xl text-green-600 font-bold">{treeCount}</p>
         <p className="text-sm text-gray-500">This session</p>
+        <p className="text-xs text-gray-500 mt-1">Threshold: 3m</p>
         {climbStatus?.isClimbing && (
           <p className="text-xs text-green-600 mt-1">🔄 Currently climbing</p>
         )}
