@@ -398,6 +398,9 @@ function App() {
         setAuthStatus("authenticated");
         console.log("✅ Signed in successfully");
 
+        // Load past sessions immediately after authentication
+        await loadPastSessions();
+
         // Fetch altitude data
         const altitudeRef = ref(database, "/AltitudeReadings");
         onValue(
@@ -448,6 +451,13 @@ function App() {
                   }
                 }
 
+                // If no data and we haven't initialized yet, just set loading to false
+                if (!hasInitialized && formattedData.length === 0) {
+                  setHasInitialized(true);
+                  setLoading(false);
+                  return;
+                }
+
                 // For subsequent updates, just update the data
                 setAltitudeData(formattedData);
 
@@ -474,13 +484,21 @@ function App() {
                 setLoading(false);
                 console.log(`🌳 Trees climbed this session: ${climbCount}`);
               } else {
+                // No current altitude data, but don't show error - allow access to session history
                 setLoading(false);
-                setError("No altitude data available in Firebase.");
+                console.log(
+                  "📊 No current altitude data available - ESP32 may be disconnected"
+                );
               }
             } catch (err) {
               console.error("❌ Error processing altitude data:", err);
-              setError("Failed to process altitude data: " + err.message);
-              setLoading(false);
+              // Only show error for processing issues, not for missing data
+              if (err.message.includes("No altitude data")) {
+                setLoading(false);
+              } else {
+                setError("Failed to process altitude data: " + err.message);
+                setLoading(false);
+              }
             }
           },
           (error) => {
@@ -609,6 +627,18 @@ function App() {
                 : "Not set"}
             </span>
           )}
+          {viewMode === "current" && altitudeData.length === 0 && (
+            <span className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded text-sm flex items-center gap-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              ESP32 Disconnected
+            </span>
+          )}
+          {viewMode === "current" && altitudeData.length > 0 && (
+            <span className="bg-green-100 text-green-800 px-3 py-2 rounded text-sm flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              ESP32 Connected
+            </span>
+          )}
         </div>
       </div>
 
@@ -695,18 +725,60 @@ function App() {
               />
             </div>
           ) : (
-            <div className="text-center">
-              <p className="text-gray-600">
-                No altitude data available. Please check your ESP32 connection.
-              </p>
-              {!isNewSession && (
-                <button
-                  onClick={handleNewSessionClick}
-                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Start New Session
-                </button>
-              )}
+            <div className="text-center py-8">
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg max-w-2xl mx-auto">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-6 w-6 text-yellow-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-lg font-medium text-yellow-800">
+                      ESP32 Not Connected
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        No altitude data is currently available. This usually
+                        means your ESP32 device is not connected or not sending
+                        data.
+                      </p>
+                      <div className="mt-4 space-y-2">
+                        <p className="font-medium">You can still:</p>
+                        <ul className="list-disc list-inside space-y-1 ml-4">
+                          <li>View your past climbing sessions</li>
+                          <li>Analyze historical data</li>
+                          <li>Manage session history</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+                      <button
+                        onClick={viewSessionHistory}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                      >
+                        📚 View Session History
+                      </button>
+                      {!isNewSession && (
+                        <button
+                          onClick={handleNewSessionClick}
+                          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                        >
+                          🆕 Start New Session
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </>

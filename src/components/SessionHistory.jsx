@@ -167,10 +167,23 @@ const SessionHistory = ({
           <h3 className="text-xl font-semibold text-gray-600 mb-2">
             No Past Sessions
           </h3>
-          <p className="text-gray-500">
-            No previous sessions found. Complete a climbing session to see it
-            here.
-          </p>
+          <div className="max-w-md mx-auto">
+            <p className="text-gray-500 mb-4">
+              No previous sessions found. To start tracking your climbing
+              sessions:
+            </p>
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-2">📋 Getting Started:</p>
+                <ol className="list-decimal list-inside space-y-1 text-left">
+                  <li>Connect your ESP32 device</li>
+                  <li>Start a new climbing session</li>
+                  <li>Climb some trees to collect data</li>
+                  <li>Save your session to see it here</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
