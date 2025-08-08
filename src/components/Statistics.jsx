@@ -83,15 +83,17 @@ const Statistics = ({
           {formatDuration(sessionDuration)}
         </p>
         <p className="text-sm text-gray-500">Current session</p>
-        {sessionStartTime && (
-          <p className="text-xs text-purple-600 mt-1">
-            Started: {getSessionStartTime()}
-          </p>
-        )}
-        {sessionStartTime && (
-          <p className="text-xs text-purple-500 mt-1">
-            Active: {sessionDuration > 0 ? "Yes" : "No"}
-          </p>
+        {sessionStartTime ? (
+          <>
+            <p className="text-xs text-purple-600 mt-1">
+              Started: {getSessionStartTime()}
+            </p>
+            <p className="text-xs text-purple-500 mt-1">
+              Active: {sessionDuration > 0 ? "Yes" : "No"}
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-red-500 mt-1">⚠️ Session not started</p>
         )}
       </div>
 

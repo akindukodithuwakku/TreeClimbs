@@ -88,8 +88,24 @@ function App() {
   };
 
   const handleSaveSessionClick = () => {
-    if (altitudeData.length === 0 || !sessionStartTime || !currentSessionId) {
-      alert("No active session to save");
+    console.log("💾 Save Session Click - Debug:", {
+      altitudeDataLength: altitudeData.length,
+      sessionStartTime: sessionStartTime
+        ? new Date(sessionStartTime * 1000).toLocaleString()
+        : "null",
+      currentSessionId: currentSessionId || "null",
+    });
+
+    if (altitudeData.length === 0) {
+      alert("No altitude data available to save");
+      return;
+    }
+    if (!sessionStartTime) {
+      alert("Session has not started yet");
+      return;
+    }
+    if (!currentSessionId) {
+      alert("No session ID available");
       return;
     }
     setShowSaveSessionDialog(true);
@@ -165,13 +181,17 @@ function App() {
   const processExistingData = (formattedData) => {
     if (formattedData.length === 0) return;
 
-    // Set session start time to current browser time for existing data
+    // Set session start time and ID to current browser time for existing data
     if (!sessionStartTime) {
       const currentBrowserTime = Date.now() / 1000;
+      const newSessionId = `session_${Date.now()}`;
       setSessionStartTime(currentBrowserTime);
+      setCurrentSessionId(newSessionId);
       console.log(
         "📅 Using existing session data, start time set to current browser time:",
-        new Date(currentBrowserTime * 1000).toLocaleString()
+        new Date(currentBrowserTime * 1000).toLocaleString(),
+        "Session ID:",
+        newSessionId
       );
     }
 
@@ -260,6 +280,25 @@ function App() {
     setViewMode("history");
   };
 
+  // Debug useEffect to track session state changes
+  useEffect(() => {
+    console.log("🔍 Session State Debug:", {
+      sessionStartTime: sessionStartTime
+        ? new Date(sessionStartTime * 1000).toLocaleString()
+        : "null",
+      currentSessionId: currentSessionId || "null",
+      altitudeDataLength: altitudeData.length,
+      isNewSession,
+      hasInitialized,
+    });
+  }, [
+    sessionStartTime,
+    currentSessionId,
+    altitudeData.length,
+    isNewSession,
+    hasInitialized,
+  ]);
+
   useEffect(() => {
     const handleFirebaseData = async () => {
       try {
@@ -326,14 +365,18 @@ function App() {
                 // For subsequent updates, just update the data
                 setAltitudeData(formattedData);
 
-                // Set session start time to current browser time if not already set
+                // Set session start time and ID to current browser time if not already set
                 if (formattedData.length > 0 && !sessionStartTime) {
                   const currentBrowserTime = Date.now() / 1000;
+                  const newSessionId = `session_${Date.now()}`;
                   setSessionStartTime(currentBrowserTime);
+                  setCurrentSessionId(newSessionId);
                   setIsNewSession(false);
                   console.log(
                     "📅 Session start time set to current browser time:",
-                    new Date(currentBrowserTime * 1000).toLocaleString()
+                    new Date(currentBrowserTime * 1000).toLocaleString(),
+                    "Session ID:",
+                    newSessionId
                   );
                 }
 
@@ -460,7 +503,9 @@ function App() {
           <button
             onClick={handleSaveSessionClick}
             className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-            disabled={!altitudeData.length || !sessionStartTime}
+            disabled={
+              !altitudeData.length || !sessionStartTime || !currentSessionId
+            }
           >
             💾 Save Session
           </button>
@@ -472,7 +517,10 @@ function App() {
           </button>
           {currentSessionId && viewMode === "current" && (
             <span className="bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm">
-              Session: {currentSessionId.slice(-8)}
+              Session: {currentSessionId.slice(-8)} | Started:{" "}
+              {sessionStartTime
+                ? new Date(sessionStartTime * 1000).toLocaleTimeString()
+                : "Not set"}
             </span>
           )}
         </div>
