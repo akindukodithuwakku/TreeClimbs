@@ -29,6 +29,12 @@ const Statistics = ({
   const climbRate =
     sessionDuration > 0 ? ((treeCount / sessionDuration) * 60).toFixed(1) : 0;
 
+  // Get session start time as formatted string
+  const getSessionStartTime = () => {
+    if (!sessionStartTime) return "Not started";
+    return new Date(sessionStartTime * 1000).toLocaleString();
+  };
+
   // Get current climbing status
   const climbStatus = climbDetector ? climbDetector.getStatus() : null;
 
@@ -79,7 +85,12 @@ const Statistics = ({
         <p className="text-sm text-gray-500">Current session</p>
         {sessionStartTime && (
           <p className="text-xs text-purple-600 mt-1">
-            Started: {new Date(sessionStartTime * 1000).toLocaleTimeString()}
+            Started: {getSessionStartTime()}
+          </p>
+        )}
+        {sessionStartTime && (
+          <p className="text-xs text-purple-500 mt-1">
+            Active: {sessionDuration > 0 ? "Yes" : "No"}
           </p>
         )}
       </div>

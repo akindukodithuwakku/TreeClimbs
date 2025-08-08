@@ -11,6 +11,27 @@ const SessionInfo = ({
     ? Math.floor((Date.now() / 1000 - sessionStartTime) / 60)
     : 0;
 
+  // Get session start time as formatted string
+  const getSessionStartTime = () => {
+    if (!sessionStartTime) return "Not started";
+    return new Date(sessionStartTime * 1000).toLocaleString();
+  };
+
+  // Get session status
+  const getSessionStatus = () => {
+    if (!sessionStartTime) return "Not started";
+    if (sessionDuration > 0) return "Active";
+    return "Just started";
+  };
+
+  // Format session duration
+  const formatDuration = (minutes) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
   const totalReadings = altitudeData.length;
   const avgAltitude =
     altitudeData.length > 0
@@ -44,8 +65,9 @@ const SessionInfo = ({
               • Session ID:{" "}
               {currentSessionId ? currentSessionId.slice(-8) : "Not set"}
             </li>
-            <li>• Session Duration: {sessionDuration} minutes</li>
-            <li>• Session Start: {formatSessionStart(sessionStartTime)}</li>
+            <li>• Session Duration: {formatDuration(sessionDuration)}</li>
+            <li>• Session Start: {getSessionStartTime()}</li>
+            <li>• Session Status: {getSessionStatus()}</li>
             <li>• Total Readings: {totalReadings}</li>
             <li>• Average Altitude: {avgAltitude} m</li>
             <li>• Data Interval: 10 seconds</li>
@@ -56,7 +78,7 @@ const SessionInfo = ({
             )}
             {isExistingSession && (
               <li className="text-green-600 font-medium">
-                • 📅 Existing session data loaded
+                • 📅 Existing session data loaded with browser-based timing
               </li>
             )}
           </ul>
@@ -129,11 +151,12 @@ const SessionInfo = ({
           Session Management:
         </h4>
         <p className="text-sm text-blue-600">
-          • Existing sessions are loaded automatically without clearing data •
-          New sessions automatically start when there's a 30+ minute gap in data
-          • Use the "New Session" button to manually start a fresh session •
-          Each session maintains its own climb count and timing • Session ID
-          helps track different climbing sessions
+          • Session timing is based on browser time for accurate tracking • New
+          sessions automatically start when there's a 30+ minute gap in data •
+          Use the "New Session" button to manually start a fresh session • Each
+          session maintains its own climb count and timing • Session ID helps
+          track different climbing sessions • Session start time is set when
+          data first arrives
         </p>
       </div>
 

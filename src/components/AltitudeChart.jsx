@@ -51,7 +51,7 @@ const AltitudeChart = ({ altitudeData, sessionStartTime, isLive = true }) => {
         // For past sessions, filter from session end time backwards
         const sessionEndTime =
           altitudeData.length > 0
-            ? altitudeData[altitudeData[altitudeData.length - 1].timestamp]
+            ? altitudeData[altitudeData.length - 1].timestamp
             : sessionStartTime;
         const cutoffTime = sessionEndTime - rangeSeconds;
         return altitudeData.filter((d) => d.timestamp >= cutoffTime);
@@ -146,7 +146,9 @@ const AltitudeChart = ({ altitudeData, sessionStartTime, isLive = true }) => {
               const seconds = Math.floor(timeFromStart % 60);
               return `Session Time: ${minutes}:${seconds
                 .toString()
-                .padStart(2, "0")}`;
+                .padStart(2, "0")} (${new Date(
+                timestamp * 1000
+              ).toLocaleTimeString()})`;
             } else {
               return new Date(timestamp * 1000).toLocaleString();
             }

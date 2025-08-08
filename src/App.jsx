@@ -7,6 +7,7 @@ import AltitudeChart from "./components/AltitudeChart";
 import Statistics from "./components/Statistics";
 import SessionInfo from "./components/SessionInfo";
 import SessionHistory from "./components/SessionHistory";
+import ConfirmationDialog from "./components/ConfirmationDialog";
 
 function App() {
   const [altitudeData, setAltitudeData] = useState([]);
@@ -21,12 +22,20 @@ function App() {
   const [pastSessions, setPastSessions] = useState([]);
   const [viewMode, setViewMode] = useState("current"); // 'current' or 'history'
   const [selectedSession, setSelectedSession] = useState(null);
+  const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
+  const [showSaveSessionDialog, setShowSaveSessionDialog] = useState(false);
 
   // Create tree climb detector instance
   const climbDetectorRef = useRef(new TreeClimbDetector());
 
   // Session management functions
+  const handleNewSessionClick = () => {
+    setShowNewSessionDialog(true);
+  };
+
   const startNewSession = async () => {
+    setShowNewSessionDialog(false);
+
     try {
       // Save current session to history if it exists
       if (altitudeData.length > 0 && sessionStartTime && currentSessionId) {
@@ -49,9 +58,11 @@ function App() {
         await saveSessionToHistory(sessionData);
       }
 
-      // Generate new session ID
+      // Generate new session ID and set start time to current browser time
       const newSessionId = `session_${Date.now()}`;
+      const currentBrowserTime = Date.now() / 1000;
       setCurrentSessionId(newSessionId);
+      setSessionStartTime(currentBrowserTime);
 
       // Clear all previous data from Firebase
       await set(ref(database, "/AltitudeReadings"), {});
@@ -59,24 +70,33 @@ function App() {
       // Reset local state
       setAltitudeData([]);
       setTreeCount(0);
-      setSessionStartTime(null);
       setIsNewSession(true);
       climbDetectorRef.current.reset();
       setViewMode("current");
       setSelectedSession(null);
 
-      console.log("🔄 New session started:", newSessionId);
+      console.log(
+        "🔄 New session started:",
+        newSessionId,
+        "at",
+        new Date(currentBrowserTime * 1000).toLocaleString()
+      );
     } catch (error) {
       console.error("❌ Error starting new session:", error);
       setError("Failed to start new session: " + error.message);
     }
   };
 
-  const saveCurrentSession = async () => {
+  const handleSaveSessionClick = () => {
     if (altitudeData.length === 0 || !sessionStartTime || !currentSessionId) {
       alert("No active session to save");
       return;
     }
+    setShowSaveSessionDialog(true);
+  };
+
+  const saveCurrentSession = async () => {
+    setShowSaveSessionDialog(false);
 
     try {
       const sessionData = {
@@ -145,12 +165,13 @@ function App() {
   const processExistingData = (formattedData) => {
     if (formattedData.length === 0) return;
 
-    // Set session start time to earliest timestamp of existing data
+    // Set session start time to current browser time for existing data
     if (!sessionStartTime) {
-      setSessionStartTime(formattedData[0].timestamp);
+      const currentBrowserTime = Date.now() / 1000;
+      setSessionStartTime(currentBrowserTime);
       console.log(
-        "📅 Using existing session data, start time:",
-        new Date(formattedData[0].timestamp * 1000).toLocaleString()
+        "📅 Using existing session data, start time set to current browser time:",
+        new Date(currentBrowserTime * 1000).toLocaleString()
       );
     }
 
@@ -164,10 +185,17 @@ function App() {
 
   const saveSessionToHistory = async (sessionData) => {
     try {
-      const sessionRef = ref(database, "/Sessions");
-      const newSessionRef = push(sessionRef);
+      // Get existing sessions
+      const sessionsRef = ref(database, "/Sessions");
+      const snapshot = await get(sessionsRef);
 
-      const sessionToSave = {
+      let sessions = [];
+      if (snapshot.exists()) {
+        sessions = snapshot.val();
+      }
+
+      // Create new session object
+      const newSession = {
         id: sessionData.id,
         startTime: sessionData.startTime,
         endTime: Date.now() / 1000,
@@ -179,7 +207,11 @@ function App() {
         createdAt: Date.now() / 1000,
       };
 
-      await set(newSessionRef, sessionToSave);
+      // Add new session to the array
+      sessions.push(newSession);
+
+      // Save updated sessions array
+      await set(sessionsRef, sessions);
       console.log("💾 Session saved to history:", sessionData.id);
     } catch (error) {
       console.error("❌ Error saving session:", error);
@@ -192,21 +224,24 @@ function App() {
       const snapshot = await get(sessionsRef);
 
       if (snapshot.exists()) {
-        const sessions = [];
-        snapshot.forEach((childSnapshot) => {
-          sessions.push({
-            key: childSnapshot.key,
-            ...childSnapshot.val(),
-          });
-        });
+        const sessions = snapshot.val();
+
+        // Add index as key for React rendering
+        const sessionsWithKeys = sessions.map((session, index) => ({
+          key: index,
+          ...session,
+        }));
 
         // Sort by creation time (newest first)
-        sessions.sort((a, b) => b.createdAt - a.createdAt);
-        setPastSessions(sessions);
-        console.log("📚 Loaded past sessions:", sessions.length);
+        sessionsWithKeys.sort((a, b) => b.createdAt - a.createdAt);
+        setPastSessions(sessionsWithKeys);
+        console.log("📚 Loaded past sessions:", sessionsWithKeys.length);
+      } else {
+        setPastSessions([]);
       }
     } catch (error) {
       console.error("❌ Error loading past sessions:", error);
+      setPastSessions([]);
     }
   };
 
@@ -291,10 +326,15 @@ function App() {
                 // For subsequent updates, just update the data
                 setAltitudeData(formattedData);
 
-                // Only set session start time if not already set
+                // Set session start time to current browser time if not already set
                 if (formattedData.length > 0 && !sessionStartTime) {
-                  setSessionStartTime(formattedData[0].timestamp);
+                  const currentBrowserTime = Date.now() / 1000;
+                  setSessionStartTime(currentBrowserTime);
                   setIsNewSession(false);
+                  console.log(
+                    "📅 Session start time set to current browser time:",
+                    new Date(currentBrowserTime * 1000).toLocaleString()
+                  );
                 }
 
                 // Process data with improved tree climbing logic
@@ -418,14 +458,14 @@ function App() {
             📚 Session History
           </button>
           <button
-            onClick={saveCurrentSession}
+            onClick={handleSaveSessionClick}
             className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
             disabled={!altitudeData.length || !sessionStartTime}
           >
             💾 Save Session
           </button>
           <button
-            onClick={startNewSession}
+            onClick={handleNewSessionClick}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
           >
             🆕 New Session
@@ -527,7 +567,7 @@ function App() {
               </p>
               {!isNewSession && (
                 <button
-                  onClick={startNewSession}
+                  onClick={handleNewSessionClick}
                   className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 >
                   Start New Session
@@ -546,6 +586,27 @@ function App() {
           onBackToCurrent={viewCurrentSession}
         />
       )}
+
+      {/* Confirmation Dialogs */}
+      <ConfirmationDialog
+        isOpen={showNewSessionDialog}
+        onConfirm={startNewSession}
+        onCancel={() => setShowNewSessionDialog(false)}
+        title="Start New Session"
+        message="Are you sure you want to start a new session? This will save the current session and clear all data."
+        confirmText="Start New Session"
+        cancelText="Cancel"
+      />
+
+      <ConfirmationDialog
+        isOpen={showSaveSessionDialog}
+        onConfirm={saveCurrentSession}
+        onCancel={() => setShowSaveSessionDialog(false)}
+        title="Save Current Session"
+        message="Are you sure you want to save the current session? This will store it in your session history."
+        confirmText="Save Session"
+        cancelText="Cancel"
+      />
     </div>
   );
 }
