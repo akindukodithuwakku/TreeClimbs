@@ -9,6 +9,8 @@ const SessionHistory = ({
   selectedSession,
   onSelectSession,
   onBackToCurrent,
+  onDeleteSession,
+  onDeleteAllSessions,
 }) => {
   const [climbDetector] = useState(new TreeClimbDetector());
 
@@ -75,6 +77,12 @@ const SessionHistory = ({
           <h2 className="text-2xl font-bold text-gray-800">
             Session Details: {selectedSession.id?.slice(-8) || "Unknown"}
           </h2>
+          <button
+            onClick={() => onDeleteSession(selectedSession.id)}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            🗑️ Delete Session
+          </button>
         </div>
 
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
@@ -135,12 +143,22 @@ const SessionHistory = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Session History</h2>
-        <button
-          onClick={onBackToCurrent}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          ← Back to Current Session
-        </button>
+        <div className="flex gap-2">
+          {pastSessions.length > 0 && (
+            <button
+              onClick={onDeleteAllSessions}
+              className="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm"
+            >
+              🗑️ Delete All Sessions
+            </button>
+          )}
+          <button
+            onClick={onBackToCurrent}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            ← Back to Current Session
+          </button>
+        </div>
       </div>
 
       {pastSessions.length === 0 ? (
@@ -204,7 +222,7 @@ const SessionHistory = ({
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-gray-200">
+                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
                   <button
                     className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
                     onClick={(e) => {
@@ -213,6 +231,15 @@ const SessionHistory = ({
                     }}
                   >
                     View Details
+                  </button>
+                  <button
+                    className="w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteSession(session.id);
+                    }}
+                  >
+                    🗑️ Delete
                   </button>
                 </div>
               </div>

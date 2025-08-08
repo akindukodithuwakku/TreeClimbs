@@ -24,6 +24,10 @@ function App() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
   const [showSaveSessionDialog, setShowSaveSessionDialog] = useState(false);
+  const [showDeleteSessionDialog, setShowDeleteSessionDialog] = useState(false);
+  const [showDeleteAllSessionsDialog, setShowDeleteAllSessionsDialog] =
+    useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
 
   // Create tree climb detector instance
   const climbDetectorRef = useRef(new TreeClimbDetector());
@@ -278,6 +282,88 @@ function App() {
   const selectPastSession = (session) => {
     setSelectedSession(session);
     setViewMode("history");
+  };
+
+  const handleDeleteSessionClick = (session) => {
+    setSessionToDelete(session);
+    setShowDeleteSessionDialog(true);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!sessionToDelete) return;
+
+    try {
+      // Get existing sessions
+      const sessionsRef = ref(database, "/Sessions");
+      const snapshot = await get(sessionsRef);
+
+      if (snapshot.exists()) {
+        const sessions = snapshot.val();
+
+        // Filter out the session to delete
+        const updatedSessions = sessions.filter(
+          (session) => session.id !== sessionToDelete.id
+        );
+
+        // Save updated sessions array
+        await set(sessionsRef, updatedSessions);
+
+        // Update local state
+        const updatedPastSessions = pastSessions.filter(
+          (session) => session.id !== sessionToDelete.id
+        );
+        setPastSessions(updatedPastSessions);
+
+        // If the deleted session was selected, clear selection
+        if (selectedSession && selectedSession.id === sessionToDelete.id) {
+          setSelectedSession(null);
+        }
+
+        console.log("🗑️ Session deleted:", sessionToDelete.id);
+        alert("Session deleted successfully!");
+      }
+    } catch (error) {
+      console.error("❌ Error deleting session:", error);
+      alert("Failed to delete session: " + error.message);
+    } finally {
+      setShowDeleteSessionDialog(false);
+      setSessionToDelete(null);
+    }
+  };
+
+  const deleteSession = async (sessionId) => {
+    const session = pastSessions.find((s) => s.id === sessionId);
+    if (session) {
+      handleDeleteSessionClick(session);
+    }
+  };
+
+  const handleDeleteAllSessionsClick = () => {
+    setShowDeleteAllSessionsDialog(true);
+  };
+
+  const confirmDeleteAllSessions = async () => {
+    try {
+      // Clear all sessions from Firebase
+      const sessionsRef = ref(database, "/Sessions");
+      await set(sessionsRef, []);
+
+      // Clear local state
+      setPastSessions([]);
+      setSelectedSession(null);
+
+      console.log("🗑️ All sessions deleted");
+      alert("All sessions deleted successfully!");
+    } catch (error) {
+      console.error("❌ Error deleting all sessions:", error);
+      alert("Failed to delete all sessions: " + error.message);
+    } finally {
+      setShowDeleteAllSessionsDialog(false);
+    }
+  };
+
+  const deleteAllSessions = () => {
+    handleDeleteAllSessionsClick();
   };
 
   // Debug useEffect to track session state changes
@@ -632,6 +718,8 @@ function App() {
           selectedSession={selectedSession}
           onSelectSession={selectPastSession}
           onBackToCurrent={viewCurrentSession}
+          onDeleteSession={deleteSession}
+          onDeleteAllSessions={deleteAllSessions}
         />
       )}
 
@@ -654,6 +742,33 @@ function App() {
         message="Are you sure you want to save the current session? This will store it in your session history."
         confirmText="Save Session"
         cancelText="Cancel"
+      />
+
+      <ConfirmationDialog
+        isOpen={showDeleteSessionDialog}
+        onConfirm={confirmDeleteSession}
+        onCancel={() => {
+          setShowDeleteSessionDialog(false);
+          setSessionToDelete(null);
+        }}
+        title="Delete Session"
+        message={`Are you sure you want to delete session ${sessionToDelete?.id?.slice(
+          -8
+        )}? This action cannot be undone.`}
+        confirmText="Delete Session"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
+
+      <ConfirmationDialog
+        isOpen={showDeleteAllSessionsDialog}
+        onConfirm={confirmDeleteAllSessions}
+        onCancel={() => setShowDeleteAllSessionsDialog(false)}
+        title="Delete All Sessions"
+        message={`Are you sure you want to delete ALL ${pastSessions.length} sessions? This action cannot be undone.`}
+        confirmText="Delete All Sessions"
+        cancelText="Cancel"
+        confirmButtonColor="red"
       />
     </div>
   );
