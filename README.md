@@ -1,6 +1,12 @@
-# 🌴 Coconut Tree Climber Dashboard
+# 🌴 Tree Climb Tracker
+
+**PROPRIETARY SOFTWARE - UNAUTHORIZED USE PROHIBITED**
 
 A real-time dashboard for monitoring coconut tree climbing activities using ESP32, BME280 sensor, and Firebase.
+
+**Copyright (c) 2025 Akindu Kodithuwakku. All Rights Reserved.**
+
+This software is the exclusive property of Akindu Kodithuwakku. Unauthorized copying, distribution, modification, or use is strictly prohibited and may result in legal action.
 
 ## 🚀 Features
 
@@ -200,17 +206,26 @@ The dashboard expects data from your ESP32 in this format:
 - [ ] Weather integration
 - [ ] Performance analytics
 
-## 🤝 Contributing
+## 📄 License & Legal
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+**PROPRIETARY SOFTWARE LICENSE**
 
-## 📄 License
+This software and its associated documentation is the exclusive property of Akindu Kodithuwakku.
+The Software is protected by copyright laws and international copyright treaties.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+**RESTRICTIONS ON USE:**
+
+- Copying, reproduction, distribution, or transmission is strictly prohibited
+- Modification, adaptation, translation, or creation of derivative works is prohibited
+- Reverse engineering, decompilation, or disassembly is prohibited
+- Commercial or non-commercial use without explicit written permission is prohibited
+- Incorporation into other software or systems is prohibited
+
+**NO LICENSE GRANTED:** This Software is provided without any license or permission for use.
+Any use without explicit written authorization constitutes copyright infringement.
+
+**For licensing inquiries, contact:** Akindu Kodithuwakku
+**Website:** https://akindukodithuwakku.com
 
 ## 🙏 Acknowledgments
 
@@ -218,3 +233,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Firebase for real-time database
 - Chart.js for data visualization
 - Vercel for hosting platform
+
+---
+
+**⚠️ LEGAL NOTICE:** This software contains confidential and proprietary information.
+Any unauthorized use, reproduction, or distribution constitutes copyright infringement
+and may result in severe legal consequences including monetary damages and injunctive relief.

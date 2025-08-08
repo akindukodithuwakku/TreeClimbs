@@ -8,6 +8,7 @@ import Statistics from "./components/Statistics";
 import SessionInfo from "./components/SessionInfo";
 import SessionHistory from "./components/SessionHistory";
 import ConfirmationDialog from "./components/ConfirmationDialog";
+import Footer from "./components/Footer";
 
 function App() {
   const [altitudeData, setAltitudeData] = useState([]);
@@ -794,6 +795,9 @@ function App() {
           onDeleteAllSessions={deleteAllSessions}
         />
       )}
+
+      {/* Footer */}
+      <Footer />
 
       {/* Confirmation Dialogs */}
       <ConfirmationDialog
