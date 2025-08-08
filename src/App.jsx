@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ref, onValue, off, set } from "firebase/database";
+import { ref, onValue, off, set, push, get } from "firebase/database";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { database, auth } from "./firebase";
 import { TreeClimbDetector } from "./utils/treeClimbLogic";
 import AltitudeChart from "./components/AltitudeChart";
 import Statistics from "./components/Statistics";
 import SessionInfo from "./components/SessionInfo";
+import SessionHistory from "./components/SessionHistory";
 
 function App() {
   const [altitudeData, setAltitudeData] = useState([]);
@@ -17,6 +18,9 @@ function App() {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [isNewSession, setIsNewSession] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [viewMode, setViewMode] = useState("current"); // 'current' or 'history'
+  const [selectedSession, setSelectedSession] = useState(null);
 
   // Create tree climb detector instance
   const climbDetectorRef = useRef(new TreeClimbDetector());
@@ -24,6 +28,27 @@ function App() {
   // Session management functions
   const startNewSession = async () => {
     try {
+      // Save current session to history if it exists
+      if (altitudeData.length > 0 && sessionStartTime && currentSessionId) {
+        const sessionData = {
+          id: currentSessionId,
+          startTime: sessionStartTime,
+          treeCount: treeCount,
+          altitudeData: altitudeData,
+          duration: Date.now() / 1000 - sessionStartTime,
+          maxAltitude:
+            altitudeData.length > 0
+              ? Math.max(...altitudeData.map((d) => d.altitude))
+              : 0,
+          avgAltitude:
+            altitudeData.length > 0
+              ? altitudeData.reduce((sum, d) => sum + d.altitude, 0) /
+                altitudeData.length
+              : 0,
+        };
+        await saveSessionToHistory(sessionData);
+      }
+
       // Generate new session ID
       const newSessionId = `session_${Date.now()}`;
       setCurrentSessionId(newSessionId);
@@ -37,11 +62,45 @@ function App() {
       setSessionStartTime(null);
       setIsNewSession(true);
       climbDetectorRef.current.reset();
+      setViewMode("current");
+      setSelectedSession(null);
 
       console.log("🔄 New session started:", newSessionId);
     } catch (error) {
       console.error("❌ Error starting new session:", error);
       setError("Failed to start new session: " + error.message);
+    }
+  };
+
+  const saveCurrentSession = async () => {
+    if (altitudeData.length === 0 || !sessionStartTime || !currentSessionId) {
+      alert("No active session to save");
+      return;
+    }
+
+    try {
+      const sessionData = {
+        id: currentSessionId,
+        startTime: sessionStartTime,
+        treeCount: treeCount,
+        altitudeData: altitudeData,
+        duration: Date.now() / 1000 - sessionStartTime,
+        maxAltitude:
+          altitudeData.length > 0
+            ? Math.max(...altitudeData.map((d) => d.altitude))
+            : 0,
+        avgAltitude:
+          altitudeData.length > 0
+            ? altitudeData.reduce((sum, d) => sum + d.altitude, 0) /
+              altitudeData.length
+            : 0,
+      };
+
+      await saveSessionToHistory(sessionData);
+      alert("Session saved successfully!");
+    } catch (error) {
+      console.error("❌ Error saving session:", error);
+      alert("Failed to save session: " + error.message);
     }
   };
 
@@ -55,6 +114,28 @@ function App() {
     // If latest data is more than 30 minutes old, treat as new session
     if (timeDiff > 1800) {
       console.log("⏰ Detected new session (data gap > 30 minutes)");
+
+      // Save the current session to history before starting new one
+      if (altitudeData.length > 0 && sessionStartTime && currentSessionId) {
+        const sessionData = {
+          id: currentSessionId,
+          startTime: sessionStartTime,
+          treeCount: treeCount,
+          altitudeData: altitudeData,
+          duration: latestTimestamp - sessionStartTime,
+          maxAltitude:
+            altitudeData.length > 0
+              ? Math.max(...altitudeData.map((d) => d.altitude))
+              : 0,
+          avgAltitude:
+            altitudeData.length > 0
+              ? altitudeData.reduce((sum, d) => sum + d.altitude, 0) /
+                altitudeData.length
+              : 0,
+        };
+        saveSessionToHistory(sessionData);
+      }
+
       return true;
     }
 
@@ -79,6 +160,69 @@ function App() {
     setTreeCount(climbCount);
 
     console.log(`🌳 Existing session: ${climbCount} trees climbed`);
+  };
+
+  const saveSessionToHistory = async (sessionData) => {
+    try {
+      const sessionRef = ref(database, "/Sessions");
+      const newSessionRef = push(sessionRef);
+
+      const sessionToSave = {
+        id: sessionData.id,
+        startTime: sessionData.startTime,
+        endTime: Date.now() / 1000,
+        treeCount: sessionData.treeCount,
+        altitudeData: sessionData.altitudeData,
+        duration: sessionData.duration,
+        maxAltitude: sessionData.maxAltitude,
+        avgAltitude: sessionData.avgAltitude,
+        createdAt: Date.now() / 1000,
+      };
+
+      await set(newSessionRef, sessionToSave);
+      console.log("💾 Session saved to history:", sessionData.id);
+    } catch (error) {
+      console.error("❌ Error saving session:", error);
+    }
+  };
+
+  const loadPastSessions = async () => {
+    try {
+      const sessionsRef = ref(database, "/Sessions");
+      const snapshot = await get(sessionsRef);
+
+      if (snapshot.exists()) {
+        const sessions = [];
+        snapshot.forEach((childSnapshot) => {
+          sessions.push({
+            key: childSnapshot.key,
+            ...childSnapshot.val(),
+          });
+        });
+
+        // Sort by creation time (newest first)
+        sessions.sort((a, b) => b.createdAt - a.createdAt);
+        setPastSessions(sessions);
+        console.log("📚 Loaded past sessions:", sessions.length);
+      }
+    } catch (error) {
+      console.error("❌ Error loading past sessions:", error);
+    }
+  };
+
+  const viewSessionHistory = () => {
+    setViewMode("history");
+    loadPastSessions();
+  };
+
+  const viewCurrentSession = () => {
+    setViewMode("current");
+    setSelectedSession(null);
+  };
+
+  const selectPastSession = (session) => {
+    setSelectedSession(session);
+    setViewMode("history");
   };
 
   useEffect(() => {
@@ -254,12 +398,39 @@ function App() {
         </h1>
         <div className="flex gap-2">
           <button
+            onClick={viewCurrentSession}
+            className={`font-bold py-2 px-4 rounded ${
+              viewMode === "current"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            📊 Current Session
+          </button>
+          <button
+            onClick={viewSessionHistory}
+            className={`font-bold py-2 px-4 rounded ${
+              viewMode === "history"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            📚 Session History
+          </button>
+          <button
+            onClick={saveCurrentSession}
+            className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+            disabled={!altitudeData.length || !sessionStartTime}
+          >
+            💾 Save Session
+          </button>
+          <button
             onClick={startNewSession}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
           >
             🆕 New Session
           </button>
-          {currentSessionId && (
+          {currentSessionId && viewMode === "current" && (
             <span className="bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm">
               Session: {currentSessionId.slice(-8)}
             </span>
@@ -294,72 +465,86 @@ function App() {
         </div>
       )}
 
-      {!isNewSession && altitudeData.length > 0 && (
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-green-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
+      {viewMode === "current" && (
+        <>
+          {!isNewSession && altitudeData.length > 0 && (
+            <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-green-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">
+                    <strong>Existing session loaded!</strong> Showing data from
+                    previous session. Use "New Session" button to start fresh.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {altitudeData.length > 0 ? (
+            <div className="space-y-6">
+              <Statistics
+                altitudeData={altitudeData}
+                treeCount={treeCount}
+                sessionStartTime={sessionStartTime}
+                climbDetector={climbDetectorRef.current}
+              />
+
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">
+                  Altitude Over Time
+                </h2>
+                <AltitudeChart
+                  altitudeData={altitudeData}
+                  sessionStartTime={sessionStartTime}
+                  isLive={true}
                 />
-              </svg>
+              </div>
+
+              <SessionInfo
+                altitudeData={altitudeData}
+                sessionStartTime={sessionStartTime}
+                climbDetector={climbDetectorRef.current}
+                currentSessionId={currentSessionId}
+              />
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                <strong>Existing session loaded!</strong> Showing data from
-                previous session. Use "New Session" button to start fresh.
+          ) : (
+            <div className="text-center">
+              <p className="text-gray-600">
+                No altitude data available. Please check your ESP32 connection.
               </p>
+              {!isNewSession && (
+                <button
+                  onClick={startNewSession}
+                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Start New Session
+                </button>
+              )}
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
-      {altitudeData.length > 0 ? (
-        <div className="space-y-6">
-          <Statistics
-            altitudeData={altitudeData}
-            treeCount={treeCount}
-            sessionStartTime={sessionStartTime}
-            climbDetector={climbDetectorRef.current}
-          />
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-gray-700">
-              Altitude Over Time
-            </h2>
-            <AltitudeChart
-              altitudeData={altitudeData}
-              sessionStartTime={sessionStartTime}
-            />
-          </div>
-
-          <SessionInfo
-            altitudeData={altitudeData}
-            sessionStartTime={sessionStartTime}
-            climbDetector={climbDetectorRef.current}
-            currentSessionId={currentSessionId}
-          />
-        </div>
-      ) : (
-        <div className="text-center">
-          <p className="text-gray-600">
-            No altitude data available. Please check your ESP32 connection.
-          </p>
-          {!isNewSession && (
-            <button
-              onClick={startNewSession}
-              className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Start New Session
-            </button>
-          )}
-        </div>
+      {viewMode === "history" && (
+        <SessionHistory
+          pastSessions={pastSessions}
+          selectedSession={selectedSession}
+          onSelectSession={selectPastSession}
+          onBackToCurrent={viewCurrentSession}
+        />
       )}
     </div>
   );
